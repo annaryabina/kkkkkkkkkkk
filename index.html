@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Экомониторинг · Реальное время с AccuWeather</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(145deg, #0b2f3e, #154c5c);
+            color: #1e2e3e;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* Шапка с переключателем */
+        header {
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(10px);
+            padding: 20px 35px;
+            border-radius: 30px;
+            margin-bottom: 35px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+           // ---------- 100% РАБОЧИЙ CORS-ПРОКСИ ДЛЯ РОССИИ ----------
+const CORS_PROXY = 'https://cors.zadzmo.org/';
+// ---------------------------------------------------------
+            display: flex;
+            gap: 10px;
+            background: #eaf0f5;
+            padding: 6px;
+            border-radius: 60px;
+        }
+        .city-btn {
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-size: 1.05em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            background: transparent;
+            color: #2f4a62;
+            transition: 0.25s;
+        }
+        .city-btn.active {
+            background: white;
+            color: #1d4e6b;
+            box-shadow: 0 8px 20px rgba(0,60,100,0.2);
+        }
+
+        .update-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .update-btn:hover { background: #2980b9; transform: scale(1.03); }
+        .update-btn i { font-size: 1.1em; }
+
+        /* Статус-бар */
+        .overall-status {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(6px);
+            padding: 18px 30px;
+            border-radius: 60px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .aqi-large {
+            font-size: 2.8em;
+            font-weight: 800;
+            margin-left: 10px;
+            line-height: 1;
+        }
+        .timestamp {
+            font-family: monospace;
+            background: rgba(0,0,0,0.2);
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 0.95em;
+        }
+
+        /* Карточка основного AQI */
+        .aqi-hero {
+            background: white;
+            border-radius: 32px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .aqi-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .aqi-number { font-size: 3.8em; line-height: 1; }
+        .aqi-label { font-size: 1.1em; text-transform: uppercase; letter-spacing: 2px; }
+        .aqi-desc { font-size: 1.3em; font-weight: 600; margin-bottom: 10px; }
+        .aqi-meta { color: #4a6980; }
+
+        /* Сетка остальных показателей (без AQI, только доп. статистика) */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 24px;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.05);
+            border-bottom: 6px solid;
+        }
+        .stat-card.good { border-bottom-color: #2ecc71; }
+        .stat-card.moderate { border-bottom-color: #f39c12; }
+        .stat-card.bad { border-bottom-color: #e74c3c; }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .stat-header i { font-size: 2em; color: #34657f; }
+        .stat-value { font-size: 2.4em; font-weight: 700; color: #0a2e3b; }
+        .stat-label { color: #4a6980; font-size: 0.85em; text-transform: uppercase; }
+
+        /* Предупреждения и рекомендации */
+        .alert-section {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .alerts-card, .advice-card {
+            background: white;
+            border-radius: 28px;
+            padding: 28px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+        .alert-item {
+            background: #fff5f0;
+            border-left: 6px solid #e74c3c;
+            padding: 18px;
+            border-radius: 0 20px 20px 0;
+            margin-bottom: 14px;
+            display: flex;
+            gap: 18px;
+        }
+        .advice-item {
+            background: #eef8f2;
+            border-left: 6px solid #2ecc71;
+            padding: 18px;
+            border-radius: 0 20px 20px 0;
+            display: flex;
+            gap: 18px;
+            margin-bottom: 14px;
+        }
+        .source-info {
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 2px dashed #a0c0d0;
+            color: #2e6279;
+            font-style: italic;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50px;
+            color: rgba(255,255,255,0.9);
+            margin-top: 20px;
+        }
+
+        @media (max-width: 800px) {
+            header { flex-direction: column; }
+            .city-switcher { justify-content: center; }
+            .alert-section { grid-template-columns: 1fr; }
+            .aqi-hero { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ШАПКА -->
+        <header>
+            <div class="logo">
+                <i class="fas fa-cloud-sun"></i>
+                <h1>ЭкоРеал</h1>
+            </div>
+            <div class="city-switcher" id="citySwitcher">
+                <button class="city-btn active" data-city="lipetsk"><i class="fas fa-industry"></i> Липецк</button>
+                <button class="city-btn" data-city="moscow"><i class="fas fa-city"></i> Москва</button>
+                <button class="city-btn" data-city="spb"><i class="fas fa-water"></i> Санкт-Петербург</button>
+            </div>
+            <button class="update-btn" id="forceUpdateBtn">
+                <i class="fas fa-rotate"></i> Обновить сейчас
+            </button>
+        </header>
+
+        <!-- БЛОК ТЕКУЩЕГО AQI (парсится с AccuWeather) -->
+        <div class="overall-status" id="overallStatus">
+            <span id="cityNameDisplay">Липецк</span>
+            <span class="aqi-large" id="aqiBigValue">--</span>
+            <span id="aqiCategoryDisplay">загрузка...</span>
+            <span class="timestamp" id="updateTimestamp">⏱ обновление...</span>
+        </div>
+
+        <!-- ОСНОВНАЯ КАРТОЧКА AQI -->
+        <div class="aqi-hero" id="aqiHeroCard">
+            <div class="aqi-circle" id="aqiCircle" style="background: #7f8c8d;">
+                <span class="aqi-number" id="aqiCircleNumber">--</span>
+                <span class="aqi-label" id="aqiCircleLabel">AQI</span>
+            </div>
+            <div style="flex: 1; margin-left: 30px;">
+                <div class="aqi-desc" id="aqiDescription">Загрузка данных...</div>
+                <div class="aqi-meta" id="aqiMeta">Источник: AccuWeather · парсинг в реальном времени</div>
+                <div style="margin-top: 15px; color: #2ecc71;" id="aqiAdvice"></div>
+            </div>
+        </div>
+
+        <!-- СТАТИСТИКА (PM2.5, выбросы, озеленение - статические данные) -->
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <!-- ПРЕДУПРЕЖДЕНИЯ И РЕКОМЕНДАЦИИ -->
+        <div class="alert-section">
+            <div class="alerts-card">
+                <h3 style="display:flex; gap:12px;"><i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Актуальные предупреждения</h3>
+                <div id="alertsList"></div>
+            </div>
+            <div class="advice-card">
+                <h3 style="display:flex; gap:12px;"><i class="fas fa-circle-info" style="color:#2ecc71;"></i> Рекомендации</h3>
+                <div id="adviceList"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2026 · Данные AQI в реальном времени с AccuWeather (парсинг <span id="parsedCity">Липецк</span>)</p>
+        </div>
+    </div>
+
+    <script>
+        // ==================================================
+        //   ПАРСИНГ ACCUWEATHER В РЕАЛЬНОМ ВРЕМЕНИ (CORS)
+        //   ЦЕЛЕВЫЕ КЛАССЫ: <div class="aq-number">ЧИСЛО</div>
+        // ==================================================
+
+        // ---------- НАСТРОЙКА: ВЫБЕРИТЕ РАБОЧИЙ CORS-ПРОКСИ ----------
+        // ВАЖНО! AccuWeather блокирует прямые запросы с браузера.
+        // РАСКОММЕНТИРУЙТЕ ОДНУ ИЗ СТРОК НИЖЕ, которая работает в вашем регионе.
+        const CORS_PROXY = ''; // ← ПО УМОЛЧАНИЮ ВЫКЛЮЧЕНО. ВЫБЕРИТЕ ПРОКСИ НИЖЕ.
+        
+        // Вариант A: Allorigins (работает в России? часто да)
+        // const CORS_PROXY = 'https://api.allorigins.win/raw?url='; 
+        
+        // Вариант B: CORS-прокси от thingproxy
+        // const CORS_PROXY = 'https://thingproxy.freeboard.io/fetch/';
+        
+        // Вариант C: CORS anywhere (требует ключ, но есть демо)
+        // const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
+        
+        // Вариант D: Ваш локальный прокси (если есть)
+        // const CORS_PROXY = 'http://localhost:8080/';
+        // -------------------------------------------------------------
+
+        // Ссылки на страницы AQI AccuWeather
+        const AQI_URLS = {
+            lipetsk: 'https://www.accuweather.com/ru/ru/lipetsk/293886/air-quality-index/293886',
+            moscow: 'https://www.accuweather.com/ru/ru/moscow/294021/air-quality-index/294021',
+            spb: 'https://www.accuweather.com/ru/ru/saint-petersburg/295212/air-quality-index/295212'
+        };
+
+        // Статические данные (выбросы, озеленение, предупреждения, рекомендации)
+        const CITY_STATIC = {
+            lipetsk: {
+                name: 'Липецк',
+                pm25: 35, emissions: 245, green: 24,
+                alerts: [
+                    { icon: 'industry', title: 'Левобережный — НЛМК', text: 'Формальдегид 1.8 ПДК', time: 'парсинг AQI' },
+                    { icon: 'car', title: 'Октябрьский район', text: 'Повышенный NO₂', time: 'актуально' }
+                ],
+                advices: [
+                    { icon: 'mask', text: 'Используйте маски в промзонах' },
+                    { icon: 'wind', text: 'Проветривайте утром' },
+                    { icon: 'leaf', text: 'Комнатные растения' }
+                ]
+            },
+            moscow: {
+                name: 'Москва',
+                pm25: 10, emissions: 125, green: 49,
+                alerts: [
+                    { icon: 'industry', title: 'Капотня — НПЗ', text: 'Зона влияния', time: 'мониторинг' },
+                    { icon: 'car', title: 'Западное Дегунино', text: 'Выбросы автотранспорта', time: 'актуально' }
+                ],
+                advices: [
+                    { icon: 'bicycle', text: 'Используйте велопрокат' },
+                    { icon: 'seedling', text: 'Озеленение дворов' },
+                    { icon: 'house', text: 'Бризер с HEPA' }
+                ]
+            },
+            spb: {
+                name: 'Санкт-Петербург',
+                pm25: 12, emissions: 98, green: 40,
+                alerts: [
+                    { icon: 'industry', title: 'Колпино — Ижорские заводы', text: 'Диоксид серы', time: '3 фев' },
+                    { icon: 'ship', title: 'Морской порт', text: 'Пыление угля', time: 'вчера' }
+                ],
+                advices: [
+                    { icon: 'umbrella', text: 'Очистители воздуха' },
+                    { icon: 'train', text: 'Электрички в промзоны' },
+                    { icon: 'island', text: 'Курортный район' }
+                ]
+            }
+        };
+
+        let currentCity = 'lipetsk';
+        let currentAQI = null;
+        let lastUpdate = null;
+
+        // ========== ПАРСИНГ AQI С ACCUWEATHER ==========
+        async function fetchAQI(city) {
+            const url = AQI_URLS[city];
+            if (!url) return null;
+            
+            // Если прокси не выбран — используем прямой fetch (но AccuWeather его заблокирует)
+            const fetchUrl = CORS_PROXY ? CORS_PROXY + encodeURIComponent(url) : url;
+            
+            try {
+                console.log(`🔄 Запрос AQI для ${city}: ${fetchUrl}`);
+                
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const html = await response.text();
+                console.log(`📄 Получен HTML (${html.length} символов)`);
+                
+                // 1. Парсим <div class="aq-number">ЧИСЛО</div>
+                const aqNumberRegex = /<div class="aq-number">(\d+)<\/div>/i;
+                const match = html.match(aqNumberRegex);
+                
+                if (match && match[1]) {
+                    const aqiValue = parseInt(match[1], 10);
+                    console.log(`✅ Найден AQI для ${city}: ${aqiValue}`);
+                    return aqiValue;
+                }
+                
+                // 2. Резервный вариант: ищем "AQI" и число рядом
+                const aqiRegex = /AQI[^0-9]*(\d{1,3})/i;
+                const fallbackMatch = html.match(aqiRegex);
+                if (fallbackMatch && fallbackMatch[1]) {
+                    const aqiValue = parseInt(fallbackMatch[1], 10);
+                    console.log(`⚠️ Найден AQI (резерв) для ${city}: ${aqiValue}`);
+                    return aqiValue;
+                }
+                
+                console.error('❌ Не удалось найти aq-number на странице');
+                return null;
+            } catch (error) {
+                console.error(`❌ Ошибка парсинга ${city}:`, error);
+                return null;
+            }
+        }
+
+        // ========== ОБНОВЛЕНИЕ ВСЕГО ИНТЕРФЕЙСА ==========
+        async function updateAll(city) {
+            // Показываем загрузку
+            document.getElementById('aqiCircleNumber').innerText = '--';
+            document.getElementById('aqiBigValue').innerText = '--';
+            document.getElementById('aqiDescription').innerText = 'Обновление данных...';
+            
+            // Парсим AQI
+            const aqi = await fetchAQI(city);
+            currentAQI = aqi;
+            lastUpdate = new Date();
+            
+            // Обновляем интерфейс
+            renderCityUI(city, aqi);
+        }
+
+        function renderCityUI(city, aqi) {
+            const staticData = CITY_STATIC[city];
+            if (!staticData) return;
+
+            // 1. Обновить статус-бар
+            document.getElementById('cityNameDisplay').innerText = staticData.name;
+            document.getElementById('aqiBigValue').innerText = aqi !== null ? aqi : '--';
+            document.getElementById('updateTimestamp').innerHTML = `⏱ ${lastUpdate ? lastUpdate.toLocaleTimeString() : 'нет данных'}`;
+            
+            // 2. Категория AQI и цвет
+            let category = '', color = '', description = '', advice = '';
+            if (aqi !== null) {
+                if (aqi <= 19) { category = 'Отличный'; color = '#2ecc71'; description = 'Качество воздуха идеальное'; advice = 'Можно проводить время на улице без ограничений'; }
+                else if (aqi <= 49) { category = 'Средний'; color = '#f39c12'; description = 'Приемлемый уровень'; advice = 'Чувствительным людям сократить пребывание на улице'; }
+                else if (aqi <= 99) { category = 'Плохой'; color = '#e67e22'; description = 'Вредно для чувствительных групп'; advice = 'Сократите время на улице'; }
+                else if (aqi <= 149) { category = 'Вредный'; color = '#e74c3c'; description = 'Вредно для всех'; advice = 'Ограничьте пребывание на улице'; }
+                else if (aqi <= 249) { category = 'Очень вредный'; color = '#8e44ad'; description = 'Опасный уровень'; advice = 'Избегайте выхода на улицу'; }
+                else { category = 'Опасно'; color = '#c0392b'; description = 'Критический уровень'; advice = 'Оставайтесь в помещении'; }
+                
+                document.getElementById('aqiCategoryDisplay').innerText = `${category} (${aqi} AQI)`;
+                document.getElementById('aqiCircle').style.background = color;
+                document.getElementById('aqiCircleNumber').innerText = aqi;
+                document.getElementById('aqiDescription').innerText = description;
+                document.getElementById('aqiAdvice').innerHTML = `<i class="fas fa-info-circle"></i> ${advice}`;
+            } else {
+                document.getElementById('aqiCategoryDisplay').innerText = 'Данные недоступны';
+                document.getElementById('aqiCircle').style.background = '#7f8c8d';
+                document.getElementById('aqiCircleNumber').innerText = '?';
+                document.getElementById('aqiDescription').innerText = 'Не удалось загрузить AQI с AccuWeather';
+                document.getElementById('aqiAdvice').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Проверьте CORS-прокси';
+            }
+
+            // 3. Статистика (PM2.5, выбросы, озеленение)
+            const statsHtml = `
+                <div class="stat-card ${staticData.pm25 > 25 ? 'moderate' : 'good'}">
+                    <div class="stat-header"><i class="fas fa-microscope"></i></div>
+                    <div class="stat-value">${staticData.pm25}</div>
+                    <div class="stat-label">PM2.5 (мкг/м³)</div>
+                </div>
+                <div class="stat-card good">
+                    <div class="stat-header"><i class="fas fa-factory"></i></div>
+                    <div class="stat-value">${staticData.emissions}</div>
+                    <div class="stat-label">Выбросы (тыс.т)</div>
+                </div>
+                <div class="stat-card good">
+                    <div class="stat-header"><i class="fas fa-leaf"></i></div>
+                    <div class="stat-value">${staticData.green}%</div>
+                    <div class="stat-label">Озеленение</div>
+                </div>
+                <div class="stat-card good">
+                    <div class="stat-header"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value">${aqi !== null ? aqi : '?'}</div>
+                    <div class="stat-label">AQI (текущий)</div>
+                </div>
+            `;
+            document.getElementById('statsGrid').innerHTML = statsHtml;
+
+            // 4. Предупреждения и рекомендации
+            let alertsHtml = '';
+            staticData.alerts.forEach(a => {
+                alertsHtml += `<div class="alert-item">
+                    <i class="fas fa-${a.icon}"></i>
+                    <div><strong>${a.title}</strong><br>${a.text}<div style="color:#587b8c; font-size:0.85em;">⏱ ${a.time}</div></div>
+                </div>`;
+            });
+            document.getElementById('alertsList').innerHTML = alertsHtml;
+
+            let advicesHtml = '';
+            staticData.advices.forEach(a => {
+                advicesHtml += `<div class="advice-item">
+                    <i class="fas fa-${a.icon}"></i>
+                    <div>${a.text}</div>
+                </div>`;
+            });
+            document.getElementById('adviceList').innerHTML = advicesHtml;
+            document.getElementById('parsedCity').innerText = staticData.name;
+        }
+
+        // ========== АВТООБНОВЛЕНИЕ ==========
+        function startAutoUpdate(intervalMinutes = 5) {
+            // Первое обновление сразу
+            updateAll(currentCity);
+            
+            // Затем каждые N минут
+            setInterval(() => {
+                console.log('⏰ Автообновление...');
+                updateAll(currentCity);
+            }, intervalMinutes * 60 * 1000);
+        }
+
+        // ========== ИНИЦИАЛИЗАЦИЯ ==========
+        window.addEventListener('load', () => {
+            // Переключение городов
+            document.querySelectorAll('.city-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentCity = this.dataset.city;
+                    updateAll(currentCity);
+                });
+            });
+
+            // Кнопка принудительного обновления
+            document.getElementById('forceUpdateBtn').addEventListener('click', () => {
+                updateAll(currentCity);
+            });
+
+            // Проверка прокси
+            if (!CORS_PROXY) {
+                alert('⚠️ ВНИМАНИЕ: CORS-прокси не настроен!\n\nAccuWeather блокирует запросы из браузера.\n\n👉 Раскомментируйте одну из строк CORS_PROXY в коде (строка ~30-40).\n\nСейчас используется прямой fetch, который, скорее всего, не сработает.');
+            }
+
+            // Старт автообновления (каждые 5 минут)
+            startAutoUpdate(5);
+        });
+    </script>
+</body>
+</html>
